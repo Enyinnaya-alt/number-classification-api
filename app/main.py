@@ -13,19 +13,19 @@ def is_prime(n: int) -> bool:
     """Check if a number is prime."""
     if n < 2:
         return False
-    for i in range(2, int(n ** 0.5) + 1):
+    for i in range(2, int(abs(n) ** 0.5) + 1):
         if n % i == 0:
             return False
     return True
 
 def is_perfect(n: int) -> bool:
     """Check if a number is a perfect number."""
-    return sum(i for i in range(1, n) if n % i == 0) == n
+    return sum(i for i in range(1, abs(n)) if n % i == 0) == n
 
 def is_armstrong(n: int) -> bool:
     """Check if a number is an Armstrong number."""
-    digits = [int(d) for d in str(n)]
-    return sum(d ** len(digits) for d in digits) == n
+    digits = [int(d) for d in str(abs(n))]
+    return sum(d ** len(digits) for d in digits) == abs(n)
 
 def get_fun_fact(number: int) -> str:
     """Get a fun fact from NumbersAPI or predefined facts."""
@@ -57,11 +57,15 @@ def classify_number(number: str = Query(..., description="The number to classify
     """Classify the number and return mathematical properties."""
 
     try:
-        number = int(number)  # Convert string input to integer
+        number = float(number)  # Allow floating-point numbers
+        if number.is_integer():
+            number = int(number)  # Convert float to int if it's a whole number
+        else:
+            raise ValueError("Floating-point numbers are not supported.")
     except ValueError:
         raise HTTPException(status_code=400, detail="Input should be a valid integer.")
 
-    digit_sum = sum(int(digit) for digit in str(number))
+    digit_sum = sum(int(digit) for digit in str(abs(number)))
     properties = []
 
     if number % 2 == 0:
