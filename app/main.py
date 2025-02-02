@@ -38,27 +38,27 @@ def get_fun_fact(number: float) -> str:
     if number in PREDEFINED_FACTS:
         return PREDEFINED_FACTS[number]
     
-    url = f"http://numbersapi.com/{number}"
+    url = f"http://numbersapi.com/{int(number)}"  # Convert to integer for API
     response = requests.get(url)
-    
-    if "missing a fact" in response.text.lower():
+
+    if response.status_code != 200 or "missing a fact" in response.text.lower():
         return f"Sorry, no fun fact found for {number}."
     
     return response.text
 
-@app.route("/api/classify-number", methods=["GET"])
+@app.route("/classify", methods=["GET"])
 def classify_number():
     """Classify the number and return mathematical properties."""
     
     number = request.args.get("number")
 
     if number is None:
-        return jsonify({"number": "unknown", "error": True}), 400
+        return jsonify({"error": "Number parameter is required"}), 400
 
     try:
         number = float(number)  # Convert input to float
     except ValueError:
-        return jsonify({"number": number, "error": True}), 400
+        return jsonify({"error": "Invalid number format"}), 400
 
     digit_sum = sum(int(digit) for digit in str(abs(int(number))))  # Only for integer part
     properties = []
@@ -82,4 +82,4 @@ def classify_number():
     }), 200
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000)
