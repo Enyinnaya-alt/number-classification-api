@@ -54,29 +54,32 @@ async def invalid_number_exception_handler(request: Request, exc: HTTPException)
 @app.get("/api/classify-number", response_class=JSONResponse)
 def classify_number(number: str = Query(..., description="The number to classify")):
     """Classify the number and return mathematical properties."""
-
+    
     try:
-        number = int(number)  # Convert input to integer
+        # Convert to float first, then cast to int if it's an integer
+        num = float(number)
+        if num.is_integer():
+            num = int(num)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid number input")
 
     properties = []
-    if number % 2 == 0:
+    if num % 2 == 0:
         properties.append("even")
     else:
         properties.append("odd")
 
-    if is_armstrong(number):
+    if isinstance(num, int) and is_armstrong(num):
         properties.append("armstrong")
 
     # Strictly matching the required JSON format
     response_data = {
-        "number": number,
-        "is_prime": is_prime(number),
-        "is_perfect": is_perfect(number),
+        "number": num,
+        "is_prime": is_prime(num) if isinstance(num, int) else False,
+        "is_perfect": is_perfect(num) if isinstance(num, int) else False,
         "properties": properties,
-        "digit_sum": sum(int(digit) for digit in str(abs(number))),  # Sum of digits
-        "fun_fact": get_fun_fact(number),
+        "digit_sum": sum(int(digit) for digit in str(abs(int(num)))),  # Sum of digits (ignoring decimals)
+        "fun_fact": get_fun_fact(num),
     }
 
     return JSONResponse(status_code=200, content=response_data)
