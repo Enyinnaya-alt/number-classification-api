@@ -1,8 +1,13 @@
 from fastapi import FastAPI, Query, HTTPException, Request
 from fastapi.responses import JSONResponse
 import requests
+import logging
 
 app = FastAPI()
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Predefined facts for specific numbers
 PREDEFINED_FACTS = {
@@ -61,9 +66,13 @@ async def invalid_number_exception_handler(request: Request, exc: HTTPException)
 def classify_number(number: str = Query(..., description="The number to classify")):
     """Classify the number and return mathematical properties."""
     
+    logger.debug(f"Received input: {number}")
+    
     try:
         parsed_number = float(number)  # Convert input to float
+        logger.debug(f"Parsed number: {parsed_number}")
     except ValueError:
+        logger.error(f"Invalid input: {number}")
         return JSONResponse(
             status_code=400,
             content={
@@ -75,6 +84,7 @@ def classify_number(number: str = Query(..., description="The number to classify
     
     # Handle invalid inputs (infinity)
     if parsed_number == float("inf") or parsed_number == float("-inf"):
+        logger.error(f"Invalid input (infinity): {number}")
         return JSONResponse(
             status_code=400,
             content={
@@ -103,6 +113,10 @@ def classify_number(number: str = Query(..., description="The number to classify
                 properties.append("perfect")
             if is_armstrong(int(parsed_number)):
                 properties.append("armstrong")
+
+    logger.debug(f"Properties: {properties}")
+    logger.debug(f"Digit sum: {digit_sum}")
+    logger.debug(f"Fun fact: {get_fun_fact(parsed_number)}")
 
     return JSONResponse(
         status_code=200,
