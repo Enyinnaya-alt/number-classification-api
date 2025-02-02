@@ -42,16 +42,19 @@ def get_fun_fact(number):
 @app.get("/api/classify-number")
 def classify_number(number: str = Query(..., description="The number to classify")):
     """Classify the number and return mathematical properties."""
-    # Input validation: try to parse the number as an integer
-    if not number.isdigit():  # Check if the number is not a valid integer
-        raise HTTPException(status_code=400, detail={
-            "number": number,
-            "error": True,
-            
-        })
     
-    # Now safely convert to int as it's validated
-    number = int(number)
+    # Validate if the number is an integer
+    try:
+        number = int(number)  # This will raise a ValueError if not a valid integer
+    except ValueError:
+        raise HTTPException(
+            status_code=400,  # 400 Bad Request
+            detail={
+                "number": number,
+                "error": True,
+                
+            }
+        )
     
     digit_sum = sum(int(digit) for digit in str(number))
     properties = []
