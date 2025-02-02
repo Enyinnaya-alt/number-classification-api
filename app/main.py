@@ -74,7 +74,7 @@ def classify_number(number: str = Query(..., description="The number to classify
         )
     
     # Handle invalid inputs (infinity)
-    if parsed_number == float("-inf") or parsed_number == float("inf"):
+    if parsed_number == float("inf") or parsed_number == float("-inf"):
         return JSONResponse(
             status_code=400,
             content={
