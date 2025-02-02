@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Request
+from fastapi.responses import JSONResponse
 import requests
 
 app = FastAPI()
@@ -8,26 +9,26 @@ PREDEFINED_FACTS = {
     371: "371 is an Armstrong number because 3³ + 7³ + 1³ = 371",
 }
 
-def is_prime(n):
+def is_prime(n: int) -> bool:
     """Check if a number is prime."""
     if n < 2:
         return False
-    for i in range(2, int(n**0.5) + 1):
+    for i in range(2, int(n ** 0.5) + 1):
         if n % i == 0:
             return False
     return True
 
-def is_perfect(n):
+def is_perfect(n: int) -> bool:
     """Check if a number is a perfect number."""
-    return n > 0 and sum(i for i in range(1, n) if n % i == 0) == n
+    return sum(i for i in range(1, n) if n % i == 0) == n
 
-def is_armstrong(n):
+def is_armstrong(n: int) -> bool:
     """Check if a number is an Armstrong number."""
     digits = [int(d) for d in str(n)]
     return sum(d ** len(digits) for d in digits) == n
 
-def get_fun_fact(number):
-    """Get a fun fact from NumbersAPI or use predefined facts."""
+def get_fun_fact(number: int) -> str:
+    """Get a fun fact from NumbersAPI or predefined facts."""
     if number in PREDEFINED_FACTS:
         return PREDEFINED_FACTS[number]
     
@@ -39,39 +40,43 @@ def get_fun_fact(number):
     
     return response.text
 
-@app.get("/api/classify-number")
+@app.exception_handler(HTTPException)
+async def invalid_number_exception_handler(request: Request, exc: HTTPException):
+    """Return a 400 response for invalid number input."""
+    return JSONResponse(
+        status_code=400,
+        content={
+            "number": request.query_params.get("number", "unknown"),
+            "error": True,
+            "message": exc.detail
+        },
+    )
+
+@app.get("/api/classify-number", response_class=JSONResponse)
 def classify_number(number: str = Query(..., description="The number to classify")):
     """Classify the number and return mathematical properties."""
-    
-    # Validate if the number is an integer
+
     try:
-        number = int(number)  # This will raise a ValueError if not a valid integer
+        number = int(number)  # Convert string input to integer
     except ValueError:
-        raise HTTPException(
-            status_code=400,  # 400 Bad Request
-            detail={
-                "number": number,
-                "error": True,
-                
-            }
-        )
-    
+        raise HTTPException(status_code=400, detail="Input should be a valid integer.")
+
     digit_sum = sum(int(digit) for digit in str(number))
     properties = []
-    
+
     if number % 2 == 0:
         properties.append("even")
     else:
         properties.append("odd")
-    
+
     if is_armstrong(number):
         properties.append("armstrong")
-    
+
     return {
         "number": number,
         "is_prime": is_prime(number),
         "is_perfect": is_perfect(number),
         "properties": properties,
         "digit_sum": digit_sum,
-        "fun_fact": get_fun_fact(number)
+        "fun_fact": get_fun_fact(number),
     }
