@@ -13,6 +13,21 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+def is_prime(n: int) -> bool:
+    """Check if a number is prime (only applies to positive integers)."""
+    if n < 2:
+        return False
+    for i in range(2, int(n ** 0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
+
+def is_perfect(n: int) -> bool:
+    """Check if a number is a perfect number (only applies to positive integers)."""
+    if n < 1:
+        return False
+    return sum(i for i in range(1, n) if n % i == 0) == n
+
 def is_armstrong(n: int) -> bool:
     """Check if a number is an Armstrong number (only applies to integers)."""
     digits = [int(d) for d in str(abs(n))]
@@ -41,8 +56,7 @@ def classify_number(number: str = Query(..., description="The number to classify
             status_code=400,
             content={
                 "number": number,
-                "error": True,
-                "message": "Input should be a valid integer."
+                "error": True
             }
         )
     
@@ -64,6 +78,8 @@ def classify_number(number: str = Query(..., description="The number to classify
         status_code=200,
         content={
             "number": parsed_number,
+            "is_prime": is_prime(parsed_number),
+            "is_perfect": is_perfect(parsed_number),
             "properties": properties,
             "digit_sum": digit_sum,
             "fun_fact": get_fun_fact(parsed_number),
