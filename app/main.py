@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 import requests
 
 app = FastAPI()
@@ -40,8 +40,18 @@ def get_fun_fact(number):
     return response.text
 
 @app.get("/api/classify-number")
-def classify_number(number: int = Query(..., description="The number to classify")):
+def classify_number(number: str = Query(..., description="The number to classify")):
     """Classify the number and return mathematical properties."""
+    # Input validation: try to parse the number as an integer
+    if not number.isdigit():  # Check if the number is not a valid integer
+        raise HTTPException(status_code=400, detail={
+            "number": number,
+            "error": True,
+            
+        })
+    
+    # Now safely convert to int as it's validated
+    number = int(number)
     
     digit_sum = sum(int(digit) for digit in str(number))
     properties = []
