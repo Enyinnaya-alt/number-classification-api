@@ -74,7 +74,19 @@ def classify_number(number: str = Query(..., description="The number to classify
                 "message": "Input should be a valid number."
             }
         )
+    
+    # Handle negative numbers and integer checks properly
+    if parsed_number == float("-inf") or parsed_number == float("inf"):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "number": number,
+                "error": True,
+                "message": "Input should be a valid finite number."
+            }
+        )
 
+    # Calculations
     digit_sum = sum(int(digit) for digit in str(abs(int(parsed_number))))  # Only for integer part
     properties = []
 
