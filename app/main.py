@@ -1,93 +1,103 @@
-from fastapi import FastAPI, Query, HTTPException, Request
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import requests
 
 app = FastAPI()
 
-# Predefined facts for specific numbers
-PREDEFINED_FACTS = {
-    371: "371 is an Armstrong number because 3³ + 7³ + 1³ = 371",
-}
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_methods=["GET"],  # Allow only GET requests
+    allow_headers=["*"],  # Allow all headers
+)
 
-def is_prime(n: float) -> bool:
-    """Check if a number is prime (only applies to integers)."""
-    if n < 2 or not n.is_integer():
+def is_prime(n: int) -> bool:
+    """Check if a number is prime (only applies to positive integers)."""
+    if n < 2:
         return False
-    n = int(n)
-    for i in range(2, int(abs(n) ** 0.5) + 1):
+    for i in range(2, int(n ** 0.5) + 1):
         if n % i == 0:
             return False
     return True
 
-def is_perfect(n: float) -> bool:
-    """Check if a number is a perfect number (only applies to integers)."""
-    if not n.is_integer():
+def is_perfect(n: int) -> bool:
+    """Check if a number is a perfect number (only applies to positive integers)."""
+    if n < 1:
         return False
-    n = int(n)
-    return sum(i for i in range(1, abs(n)) if n % i == 0) == n
+    return sum(i for i in range(1, n) if n % i == 0) == n
 
-def is_armstrong(n: float) -> bool:
+def is_armstrong(n: int) -> bool:
     """Check if a number is an Armstrong number (only applies to integers)."""
-    if not n.is_integer():
-        return False
-    n = int(n)
     digits = [int(d) for d in str(abs(n))]
     return sum(d ** len(digits) for d in digits) == abs(n)
 
 def get_fun_fact(number: float) -> str:
-    """Get a fun fact from NumbersAPI or predefined facts."""
-    if number in PREDEFINED_FACTS:
-        return PREDEFINED_FACTS[number]
-    
-    url = f"http://numbersapi.com/{int(number)}"
-    response = requests.get(url)
-    
-    if "missing a fact" in response.text.lower():
-        return f"Sorry, no fun fact found for {number}."
-    
-    return response.text
-
-@app.exception_handler(HTTPException)
-async def invalid_number_exception_handler(request: Request, exc: HTTPException):
-    """Return a 400 response for invalid number input."""
-    return JSONResponse(
-        status_code=400,
-        content={
-            "number": request.query_params.get("number", "unknown"),
-            "error": True,
-            "message": exc.detail
-        },
-    )
+    """Get a fun fact from NumbersAPI using the 'math' type."""
+    url = f"http://numbersapi.com/{number}/math"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        if "missing a fact" in response.text.lower():
+            return f"Sorry, no fun fact found for {number}."
+        return response.text
+    except requests.exceptions.RequestException as e:
+        return f"Sorry, unable to retrieve a fun fact for {number} due to an error: {str(e)}"
 
 @app.get("/api/classify-number", response_class=JSONResponse)
 def classify_number(number: str = Query(..., description="The number to classify")):
     """Classify the number and return mathematical properties."""
     
     try:
-        number = float(number)  # Convert input to float
+        parsed_number = float(number)  # Convert input to float
     except ValueError:
-        raise HTTPException(status_code=400, detail="Input should be a valid number.")
-
-    digit_sum = sum(int(digit) for digit in str(abs(int(number))))  # Only for integer part
+        return JSONResponse(
+            status_code=400,
+            content={
+                "number": number,
+                "error": True
+            }
+        )
+    
+    # Handle invalid inputs (infinity)
+    if parsed_number == float("inf") or parsed_number == float("-inf"):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "number": number,
+                "error": True
+            }
+        )
+    
+    # Properties to calculate
     properties = []
+    digit_sum = sum(int(digit) for digit in str(abs(int(parsed_number))) if digit.isdigit())  # Only integer part
 
-    if number % 2 == 0:
-        properties.append("even")
-    else:
-        properties.append("odd")
+    # Check if the number is even or odd (only for integers)
+    if parsed_number.is_integer():
+        if int(parsed_number) % 2 == 0:
+            properties.append("even")
+        else:
+            properties.append("odd")
 
-    if is_armstrong(number):
-        properties.append("armstrong")
+        # Check for prime, perfect, and Armstrong (only for positive integers)
+        if parsed_number > 0:
+            if is_prime(int(parsed_number)):
+                properties.append("prime")
+            if is_perfect(int(parsed_number)):
+                properties.append("perfect")
+            if is_armstrong(int(parsed_number)):
+                properties.append("armstrong")
 
     return JSONResponse(
         status_code=200,
         content={
-            "number": number,
-            "is_integer": number.is_integer(),
-            "is_prime": is_prime(number),
-            "is_perfect": is_perfect(number),
+            "number": parsed_number,
+            "is_prime": is_prime(int(parsed_number)) if parsed_number.is_integer() and parsed_number > 0 else False,
+            "is_perfect": is_perfect(int(parsed_number)) if parsed_number.is_integer() and parsed_number > 0 else False,
             "properties": properties,
             "digit_sum": digit_sum,
-            "fun_fact": get_fun_fact(number),
-        },
+            "fun_fact": get_fun_fact(parsed_number),
+        }
     )
