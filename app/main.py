@@ -1,85 +1,82 @@
-from fastapi import FastAPI, Query, HTTPException, Request
-from fastapi.responses import JSONResponse
-import requests
 
-app = FastAPI()
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import math
 
-# Predefined facts for specific numbers
-PREDEFINED_FACTS = {
-    371: "371 is an Armstrong number because 3³ + 7³ + 1³ = 371",
-}
+app = Flask(__name__)
+CORS(app)
 
-def is_prime(n: int) -> bool:
-    """Check if a number is prime."""
-    if n < 2:
+def is_prime(n):
+    if n < 2 or not n.is_integer():  # Prime numbers must be whole and ≥ 2
         return False
-    for i in range(2, int(abs(n) ** 0.5) + 1):
+    n = int(n)
+    for i in range(2, int(math.sqrt(n)) + 1):
         if n % i == 0:
             return False
     return True
 
-def is_perfect(n: int) -> bool:
-    """Check if a number is a perfect number."""
-    return sum(i for i in range(1, abs(n)) if n % i == 0) == n
+def is_perfect(n):
+    if not n.is_integer():  # Only whole numbers can be perfect
+        return False
+    n = int(n)
+    return sum(i for i in range(1, n) if n % i == 0) == n
 
-def is_armstrong(n: int) -> bool:
-    """Check if a number is an Armstrong number."""
-    digits = [int(d) for d in str(abs(n))]
-    return sum(d ** len(digits) for d in digits) == abs(n)
+def is_armstrong(n):
+    if not n.is_integer():  # Armstrong numbers are whole numbers
+        return False
+    digits = [int(d) for d in str(abs(int(n)))]  # Convert to integer before checking
+    return sum(d**len(digits) for d in digits) == int(n)
 
-def get_fun_fact(number: int) -> str:
-    """Get a fun fact from NumbersAPI or predefined facts."""
-    if number in PREDEFINED_FACTS:
-        return PREDEFINED_FACTS[number]
-    
-    url = f"http://numbersapi.com/{number}"
-    response = requests.get(url)
+@app.route('/')
+def home():
+    return "Welcome to the Number Classification API! Use /api/classify-number?number=<your_number> to classify a number."
 
-    if "missing a fact" in response.text.lower():
-        return f"Sorry, no fun fact found for {number}."
-    
-    return response.text
+@app.route('/api/classify-number', methods=['GET'])
+def classify_number():
+    number = request.args.get('number')
 
-@app.exception_handler(HTTPException)
-async def invalid_number_exception_handler(request: Request, exc: HTTPException):
-    """Return a 400 response for invalid number input."""
-    return JSONResponse(
-        status_code=400,
-        content={
-            "number": request.query_params.get("number", "unknown"),
-            "error": True
-        },
-    )
-
-@app.get("/api/classify-number", response_class=JSONResponse)
-def classify_number(number: str = Query(..., description="The number to classify")):
-    """Classify the number and return mathematical properties."""
-    
+    # Ensure number is included in the error response
     try:
-        # Convert to float first, then cast to int if it's an integer
-        num = float(number)
-        if num.is_integer():
-            num = int(num)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid number input")
+        number = float(number)  # Accept both integers and floats
+    except (ValueError, TypeError):
+        return jsonify({"number": number, "error": "Invalid input. Please provide a valid number."}), 400
 
     properties = []
-    if num % 2 == 0:
-        properties.append("even")
-    else:
-        properties.append("odd")
-
-    if isinstance(num, int) and is_armstrong(num):
-        properties.append("armstrong")
-
-    # Strictly matching the required JSON format
-    response_data = {
-        "number": num,
-        "is_prime": is_prime(num) if isinstance(num, int) else False,
-        "is_perfect": is_perfect(num) if isinstance(num, int) else False,
-        "properties": properties,
-        "digit_sum": sum(int(digit) for digit in str(abs(int(num)))),  # Sum of digits (ignoring decimals)
-        "fun_fact": get_fun_fact(num),
+    
+    # Classify the number based on various properties
+    classifications = {
+        "prime": is_prime(number),
+        "perfect": is_perfect(number),
+        "armstrong": is_armstrong(number),
+        "even": number % 2 == 0,
+        "odd": number % 2 != 0
     }
 
-    return JSONResponse(status_code=200, content=response_data)
+    # Dynamically construct the properties list based on classifications
+    for prop, is_valid in classifications.items():
+        if is_valid:
+            properties.append(prop)
+
+    digit_sum = sum(int(digit) for digit in str(abs(int(number))))
+
+    # Generate the fun fact dynamically for Armstrong numbers
+    fun_fact = None
+    if classifications["armstrong"]:
+        fun_fact = f"{int(number)} is an Armstrong number because " + " + ".join(
+            [f"{d}^{len(str(int(number)))}" for d in str(abs(int(number)))]
+        ) + f" = {int(number)}"
+
+    # Build the response dynamically
+    response = {
+        "number": number,
+        "is_prime": classifications["prime"],
+        "is_perfect": classifications["perfect"],
+        "properties": properties,
+        "digit_sum": digit_sum,
+        "fun_fact": fun_fact if fun_fact else "No fact found."
+    }
+
+    return jsonify(response), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
