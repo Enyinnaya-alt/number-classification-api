@@ -10,21 +10,21 @@ PREDEFINED_FACTS = {
 }
 
 def is_prime(n: float) -> bool:
-    """Check if a number is prime (only applies to integers)."""
+    """Check if a number is prime (only applies to positive integers)."""
     if n < 2 or not n.is_integer():
         return False
     n = int(n)
-    for i in range(2, int(abs(n) ** 0.5) + 1):
+    for i in range(2, int(n ** 0.5) + 1):
         if n % i == 0:
             return False
     return True
 
 def is_perfect(n: float) -> bool:
-    """Check if a number is a perfect number (only applies to integers)."""
-    if not n.is_integer():
+    """Check if a number is a perfect number (only applies to positive integers)."""
+    if n < 1 or not n.is_integer():
         return False
     n = int(n)
-    return sum(i for i in range(1, abs(n)) if n % i == 0) == n
+    return sum(i for i in range(1, n) if n % i == 0) == n
 
 def is_armstrong(n: float) -> bool:
     """Check if a number is an Armstrong number (only applies to integers)."""
@@ -64,27 +64,37 @@ def classify_number(number: str = Query(..., description="The number to classify
     """Classify the number and return mathematical properties."""
     
     try:
-        number = float(number)  # Convert input to float
+        parsed_number = float(number)  # Convert input to float
     except ValueError:
-        raise HTTPException(status_code=400, detail="Input should be a valid number.")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "number": number,
+                "error": True,
+                "message": "Input should be a valid number."
+            }
+        )
 
-    digit_sum = sum(int(digit) for digit in str(abs(int(number))))  # Only for integer part
+    digit_sum = sum(int(digit) for digit in str(abs(int(parsed_number))))  # Only for integer part
     properties = []
 
-    if number % 2 == 0:
+    if parsed_number % 2 == 0:
         properties.append("even")
     else:
         properties.append("odd")
 
-    if is_armstrong(number):
+    if is_armstrong(parsed_number):
         properties.append("armstrong")
 
-    return {
-        "number": number,
-        "is_integer": number.is_integer(),
-        "is_prime": is_prime(number),
-        "is_perfect": is_perfect(number),
-        "properties": properties,
-        "digit_sum": digit_sum,
-        "fun_fact": get_fun_fact(number),
-    }
+    return JSONResponse(
+        status_code=200,
+        content={
+            "number": parsed_number,
+            "is_integer": parsed_number.is_integer(),
+            "is_prime": is_prime(parsed_number),
+            "is_perfect": is_perfect(parsed_number),
+            "properties": properties,
+            "digit_sum": digit_sum,
+            "fun_fact": get_fun_fact(parsed_number),
+        }
+    )
