@@ -20,9 +20,8 @@ This API takes a number and returns interesting mathematical properties about it
     "fun_fact": "371 is an Armstrong number because 3^3 + 7^3 + 1^3 = 371"
 }
 
-###f for a bad request
+For an invalid request, we get this response:
 {
     "number": "abc",
     "error": true,
-
 }
