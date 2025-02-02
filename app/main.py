@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 # Predefined facts for specific numbers
 PREDEFINED_FACTS = {
-    371: "371 is an Armstrong number because 3³ + 7³ + 1³ = 371",
+    371: "371 is an Armstrong number because 3^3 + 7^3 + 1^3 = 371",
 }
 
 def is_prime(n: float) -> bool:
@@ -33,12 +33,12 @@ def is_armstrong(n: float) -> bool:
     digits = [int(d) for d in str(abs(n))]
     return sum(d ** len(digits) for d in digits) == abs(n)
 
-def get_fun_fact(number: float) -> str:
+def get_fun_fact(number: int) -> str:
     """Get a fun fact from NumbersAPI or predefined facts."""
     if number in PREDEFINED_FACTS:
         return PREDEFINED_FACTS[number]
     
-    url = f"http://numbersapi.com/{int(number)}"  # Convert to integer for API
+    url = f"http://numbersapi.com/{number}"
     response = requests.get(url)
 
     if response.status_code != 200 or "missing a fact" in response.text.lower():
@@ -46,39 +46,33 @@ def get_fun_fact(number: float) -> str:
     
     return response.text
 
-@app.route("/classify", methods=["GET"])
+@app.route("/api/classify-number", methods=["GET"])
 def classify_number():
     """Classify the number and return mathematical properties."""
     
     number = request.args.get("number")
 
     if number is None:
-        return jsonify({"error": "Number parameter is required"}), 400
+        return jsonify({"error": True, "number": "unknown"}), 400
 
     try:
         number = float(number)  # Convert input to float
     except ValueError:
-        return jsonify({"error": "Invalid number format"}), 400
+        return jsonify({"error": True, "number": number}), 400
 
-    digit_sum = sum(int(digit) for digit in str(abs(int(number))))  # Only for integer part
-    properties = []
-
-    if number % 2 == 0:
-        properties.append("even")
-    else:
-        properties.append("odd")
+    digit_sum = sum(int(digit) for digit in str(abs(int(number))))  # Sum of digits (ignoring decimal part)
+    properties = ["even" if number % 2 == 0 else "odd"]
 
     if is_armstrong(number):
         properties.append("armstrong")
 
     return jsonify({
-        "number": number,
-        "is_integer": number.is_integer(),
+        "number": int(number) if number.is_integer() else number,
         "is_prime": is_prime(number),
         "is_perfect": is_perfect(number),
         "properties": properties,
         "digit_sum": digit_sum,
-        "fun_fact": get_fun_fact(number),
+        "fun_fact": get_fun_fact(int(number)),  # Convert to int for fun fact API
     }), 200
 
 if __name__ == "__main__":
