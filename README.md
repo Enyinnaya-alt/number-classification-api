@@ -1,12 +1,26 @@
 # Number Classification API
 
+This API classifies numbers based on certain mathematical properties.
 
+## Endpoints
 
-This API classifies numbers as Even, Odd, and Prime.
+- `GET /api/classify-number?number={number}`
 
-## Installation
-```sh
-git clone <repo-url>
-cd number-classification-api
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+## Response Example
+
+```json
+{
+    "number": 371,
+    "is_prime": false,
+    "is_perfect": false,
+    "properties": ["armstrong", "odd"],
+    "digit_sum": 11,
+    "fun_fact": "371 is an Armstrong number because 3^3 + 7^3 + 1^3 = 371"
+}
+
+##for an invalid request we get this resonse
+{
+    "number": "abc",
+    "error": true,
+
+}
