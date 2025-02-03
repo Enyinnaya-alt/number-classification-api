@@ -55,8 +55,9 @@ def classify_number():
     number = int(number)  # Convert to integer
     digit_sum = sum(int(digit) for digit in str(abs(number)))  # Sum of digits
 
-    # Correctly format the "properties" list
+    # ✅ Correct Properties Assignment
     properties = []
+    
     if is_armstrong(number):
         properties.append("armstrong")
 
@@ -69,7 +70,7 @@ def classify_number():
         "number": number,
         "is_prime": is_prime(number),
         "is_perfect": is_perfect(number),
-        "properties": properties,
+        "properties": properties,  # ✅ Always has the correct properties now
         "digit_sum": digit_sum,
         "fun_fact": get_fun_fact(number),
     }), 200
