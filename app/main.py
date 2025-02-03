@@ -54,15 +54,16 @@ def classify_number():
 
     number = int(number)  # Convert to integer
     digit_sum = sum(int(digit) for digit in str(abs(number)))  # Sum of digits
+
+    # Correctly format the "properties" list
     properties = []
+    if is_armstrong(number):
+        properties.append("armstrong")
 
     if number % 2 == 0:
         properties.append("even")
     else:
         properties.append("odd")
-
-    if is_armstrong(number):
-        properties.append("armstrong")
 
     return jsonify({
         "number": number,
